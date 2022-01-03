@@ -1,14 +1,22 @@
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   TextInput,
+  ScrollView,
+  TouchableOpacityBase,
+  Alert,
+  Button,
 } from "react-native";
 import { theme } from "./colors";
+import { Fontisto } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+
+const STORAGE_KEY = "@toDos"
 export default function App() {
   const [working, setWorking] = useState(true);
   const idea = () => setWorking(false);
@@ -19,16 +27,59 @@ export default function App() {
 
   const [toDos, setToDos] = useState({});
 
-  const addToDo = () => {
+  const saveToDos = async (toSave) => {
+    try{
+      const s = JSON.stringify(toSave);
+      await AsyncStorage.setItem(STORAGE_KEY, s);
+    }
+    catch (e) {
+      console.log(e);
+    }
+  }
+  const loadToDos = async () => {
+    try{
+      const s = await AsyncStorage.getItem(STORAGE_KEY);
+      setToDos(JSON.parse(s));
+    }
+    catch (e) {
+      console.log(e);
+    }
+  }
+
+  useEffect(() => {
+    loadToDos();
+  }, []);
+  const addToDo = async () => {
     if (text === "") {
       return
     }
     // save to do
-    const tmp = {[Date.now()] : {text:text, WorkOn:working}}; // https://koonsland.tistory.com/146
-    const newToDo = Object.assign({}, toDos,tmp);
+    //const tmp = {[Date.now()] : {text:text, nowWorkOn:working}}; // https://koonsland.tistory.com/146
+    // == const newToDos = Object.assign({}, toDos,tmp);
+    const newToDos = {...toDos, [Date.now()] : {text:text, nowWorkOn:working}}
 
+    setToDos(newToDos);
+    await saveToDos(newToDos);
     setText("");
-    console.log(newToDo);
+  }
+
+  const deleteToDo = async (key) => {
+    Alert.alert("삭제 버튼", "정말 삭제하시겠습니까 ?", [
+      { text: "취소", onPress: () => {
+        ;
+      }},
+      { text: "확인", onPress: async () => {
+        const newToDos = {...toDos};
+        console.log(newToDos);
+        console.log("key :", key);
+        delete newToDos[key];
+        setToDos(newToDos);
+        await saveToDos(newToDos);
+      } },
+    ]);
+
+
+
   }
 
   return (
@@ -62,6 +113,19 @@ export default function App() {
           style={styles.input}
         />
       </View>
+
+      <ScrollView>
+        {Object.keys(toDos).map((key) =>
+          toDos[key].nowWorkOn === working ? (
+            <View style={styles.toDo} key={key}>
+              <Text style={styles.toDoText}>{toDos[key].text}</Text>
+              <TouchableOpacity onPress={() => deleteToDo(key)}>
+                <Text><Fontisto name="trash" size={20} color={theme.grey} /></Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -88,6 +152,22 @@ const styles = StyleSheet.create({
     paddingVertical: 16, // padding top and bottom
     fontSize: 18,
     borderRadius: 20,
-    marginTop: 20,
+    marginVertical: 20,
   },
+
+  toDo: {
+    backgroundColor : theme.toDoBg,
+    marginBottom: 10,
+    padding: 20,
+    borderRadius: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  toDoText: {
+    color: "white",
+    fontSize: 18,
+  },
+
+
 });
