@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useState, createRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -14,18 +14,27 @@ import {
 import { theme } from "./colors";
 import { Fontisto } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import Modal from "react-native-modal";
+import { color } from "react-native/Libraries/Components/View/ReactNativeStyleAttributes";
 
 const STORAGE_KEY = "@toDos"
 export default function App() {
+  
   const [working, setWorking] = useState(true);
   const idea = () => setWorking(false);
   const work = () => setWorking(true);
 
   const [text, setText] = useState("");
   const onChangeText = (payload) => setText(payload);
+  const onChangeReWirteText = (payload) => setReWriteText(payload);
+
 
   const [toDos, setToDos] = useState({});
+
+  const [textInputModalVisible, setTextInputModalVisible] = useState(false);
+  const [reWriteText, setReWriteText] = useState("");
+  const [reWriteKey, setReWriteKey] = useState("");
+  let inputRef = createRef(null);
 
   const saveToDos = async (toSave) => {
     try{
@@ -62,6 +71,18 @@ export default function App() {
     await saveToDos(newToDos);
     setText("");
   }
+  const reWriteToDo = async () => {
+    if (reWriteText === "") {
+      return
+    }
+
+    const newToDos = {...toDos}; // toDos가 수정되면 안되기 때문에 얉은 복사
+    
+    newToDos[reWriteKey].text = reWriteText;
+    setToDos(newToDos);
+    await saveToDos(newToDos);
+    setTextInputModalVisible(false);
+  }
 
   const deleteToDo = async (key) => {
     Alert.alert("삭제 버튼", "정말 삭제하시겠습니까 ?", [
@@ -77,11 +98,23 @@ export default function App() {
         await saveToDos(newToDos);
       } },
     ]);
-
-
-
   }
 
+  const reWrite = (key) => {
+    setReWriteKey(key);
+    setReWriteText(toDos[key].text);
+    setTextInputModalVisible(true);
+  }
+
+  const afterModal = () => {
+    
+    const timeout = setTimeout(() => {
+      console.log(reWriteText);
+      inputRef.current?.blur();
+      inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timeout);
+  }
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
@@ -118,14 +151,42 @@ export default function App() {
         {Object.keys(toDos).map((key) =>
           toDos[key].nowWorkOn === working ? (
             <View style={styles.toDo} key={key}>
-              <Text style={styles.toDoText}>{toDos[key].text}</Text>
+              <TouchableOpacity onPress={() => reWrite(key)}>
+                <Text style={styles.toDoText}>{toDos[key].text}</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => deleteToDo(key)}>
-                <Text><Fontisto name="trash" size={20} color={theme.grey} /></Text>
+                <Text>
+                  <Fontisto name="trash" size={20} color={theme.grey} />
+                </Text>
               </TouchableOpacity>
             </View>
           ) : null
         )}
       </ScrollView>
+
+      <View>
+        <Modal
+          animationInTiming={300}
+          animationOutTiming={500}
+          hideModalContentWhileAnimating={true}
+          isVisible={textInputModalVisible}
+          onBackdropPress={() => setTextInputModalVisible(false)}
+          backdropTransitionOutTiming={500}
+          useNativeDriver={true}
+          onModalShow={() => afterModal()}
+        >
+          <View style={styles.modal}>
+            <TextInput
+              value={reWriteText}
+              returnKeyType="done"
+              onSubmitEditing={() => reWriteToDo(reWriteKey)}
+              onChangeText={onChangeReWirteText}
+              style={styles.input}
+              ref={inputRef}
+            />
+          </View>
+        </Modal>
+      </View>
     </View>
   );
 }
@@ -169,5 +230,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
 
-
+  modal: {
+  },
+  modalText: {
+    fontSize: 30,
+    margin: 0,
+  },
 });
