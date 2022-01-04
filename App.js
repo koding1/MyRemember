@@ -10,11 +10,12 @@ import {
   TouchableOpacityBase,
   Alert,
   Button,
+  Modal,
 } from "react-native";
 import { theme } from "./colors";
 import { Fontisto } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Modal from "react-native-modal";
+// import Modal from "react-native-modal";
 import { color } from "react-native/Libraries/Components/View/ReactNativeStyleAttributes";
 
 const STORAGE_KEY = "@toDos"
@@ -72,9 +73,6 @@ export default function App() {
     setText("");
   }
   const reWriteToDo = async () => {
-    if (reWriteText === "") {
-      return
-    }
 
     const newToDos = {...toDos}; // toDos가 수정되면 안되기 때문에 얉은 복사
     
@@ -166,16 +164,14 @@ export default function App() {
 
       <View>
         <Modal
-          animationInTiming={300}
-          animationOutTiming={500}
-          hideModalContentWhileAnimating={true}
-          isVisible={textInputModalVisible}
-          onBackdropPress={() => setTextInputModalVisible(false)}
-          backdropTransitionOutTiming={500}
-          useNativeDriver={true}
-          onModalShow={() => afterModal()}
+          visible={textInputModalVisible}
+          onShow={afterModal}
+          animationType={'slide'}
+          transparent={true}
+          style={styles.modal}
+          onRequestClose={() => setTextInputModalVisible(false)}
         >
-          <View style={styles.modal}>
+          <View style={styles.modalView}>
             <TextInput
               value={reWriteText}
               returnKeyType="done"
@@ -183,6 +179,7 @@ export default function App() {
               onChangeText={onChangeReWirteText}
               style={styles.input}
               ref={inputRef}
+              autoFocus
             />
           </View>
         </Modal>
@@ -229,8 +226,14 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 18,
   },
-
   modal: {
+
+  },
+  modalView: {
+    padding: 20,
+    flex:1,
+    justifyContent: "center",
+    backgroundColor: theme.modalBg,
   },
   modalText: {
     fontSize: 30,
